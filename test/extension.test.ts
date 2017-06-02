@@ -16,3 +16,10 @@ suite("TextDocumentContentProvider", () => {
         assert.ok(provider.provideTextDocumentContent(previewUri).indexOf("iframe") !== -1);
     });
 });
+
+suite("Configuration", () => {
+    test("configuration is default", () => {
+        const useGlobal = vscode.workspace.getConfiguration("ungit").get<boolean>("useGlobal");
+        assert.strictEqual(useGlobal, false);
+    });
+});

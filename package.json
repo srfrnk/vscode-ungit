@@ -26,7 +26,7 @@
   "engines": {
     "vscode": "^1.11.1"
   },
-  "main": "./out/extension",
+  "main": "./out/src/extension",
   "activationEvents": [
     "onCommand:extension.ungit"
   ],
@@ -37,6 +37,17 @@
         "title": "Open Ungit"
       }
     ],
+    "configuration": {
+        "type": "object",
+        "title": "Ungit configuration",
+        "properties": {
+            "ungit.useGlobal": {
+                "type": "boolean",
+                "default": false,
+                "description": "Use a global installation of Ungit instead of the bundled one."
+            }
+        }
+    },
     "keybindings": [
       {
         "command": "extension.ungit",

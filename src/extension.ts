@@ -1,9 +1,11 @@
 import { ChildProcess, fork } from "child_process";
+import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 
 const previewUri = vscode.Uri.parse("ungit://view");
-const modulePath = path.join(__dirname, "..", "node_modules", "ungit", "bin", "ungit");
+const localPath = path.join(__dirname, "..", "..", "node_modules", "ungit", "bin", "ungit");
+const globalPath = "ungit";
 let child: ChildProcess;
 
 export class TextDocumentContentProvider implements vscode.TextDocumentContentProvider {
@@ -28,7 +30,7 @@ export class TextDocumentContentProvider implements vscode.TextDocumentContentPr
     }
 
     private getLoadingHtml(): string {
-        const imagePath = path.join(__dirname, "..", "images", "logo.png");
+        const imagePath = path.join(__dirname, "..", "..", "images", "logo.png");
         return `
         <div style="position: fixed; height: 100%; width: 100%; background: #252833; display: flex; justify-content: space-around; flex-direction: column; align-items: center;">
             <image src="${imagePath}" />
@@ -51,17 +53,33 @@ export class TextDocumentContentProvider implements vscode.TextDocumentContentPr
 }
 
 function executeCommand(provider: TextDocumentContentProvider): void {
+    let errorMessage = "";
     vscode.commands.executeCommand("vscode.previewHtml", previewUri, vscode.ViewColumn.Two, "Ungit").then((success) => {
         return;
     }, (reason: string) => {
         vscode.window.showErrorMessage(reason);
     });
 
+    const useGlobal = vscode.workspace.getConfiguration("ungit").get<boolean>("useGlobal");
+    const modulePath = useGlobal ? globalPath : localPath;
     child = fork(modulePath, ["-b=0"], { silent: true });
     child.stdout.on("data", (message: Buffer) => {
         const started = message.toString().indexOf("## Ungit started ##") !== -1;
         if (started) {
             provider.ready = true;
+        }
+    });
+    child.stderr.on("data", (message: Buffer) => {
+        errorMessage += message.toString() + os.EOL;
+    });
+    child.on("exit", () => {
+        if (errorMessage) {
+            if (useGlobal) {
+                const message = "Unable to start global Ungit. Check the global installation or switch to the bundled installation.";
+                vscode.window.showErrorMessage(`${message}${os.EOL}${errorMessage}`);
+            } else {
+                vscode.window.showErrorMessage(`Unable to start Ungit.${os.EOL}${errorMessage}`);
+            }
         }
     });
 }
